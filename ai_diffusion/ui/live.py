@@ -55,6 +55,25 @@ class LiveWidget(QWidget):
         layout.setContentsMargins(0, 2, 4, 0)
         self.setLayout(layout)
 
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat(_("ready"))
+        self.progress_bar.setValue(0)
+        self.progress_bar.setStyleSheet(
+            f"""
+            QProgressBar {{
+                background-color: {theme.yellow};
+                color: #000000;
+                qproperty-alignment: 'AlignVCenter | AlignHCenter';
+                max-height: 16px;
+            }}
+            QProgressBar::chunk {{
+                background-color: {theme.green};
+                width: 20px;
+            }}"""
+        )
+        layout.addWidget(self.progress_bar)
+
         self.workspace_select = WorkspaceSelectWidget(self)
 
         self.active_button = QToolButton(self)
@@ -156,23 +175,6 @@ class LiveWidget(QWidget):
         self.error_box = ErrorBox(self)
         layout.addWidget(self.error_box)
 
-        self.progress_bar = QProgressBar(self)
-        self.progress_bar.setTextVisible(True)
-        self.progress_bar.setFormat("Loading %p%")
-        self.progress_bar.setStyleSheet(
-            f"""
-            QProgressBar {{
-                background: transparent;
-                text-align: center;
-            }}
-            QProgressBar::chunk {{
-                background-color: {theme.grey};
-                width: 20px;
-            }}"""
-        )
-        self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
-
         self.preview_area = LivePreviewArea(self)
         layout.addWidget(self.preview_area)
 
@@ -247,16 +249,18 @@ class LiveWidget(QWidget):
         )
 
     def update_progress(self):
-        if self.model.live.result is None:
-            if self.model.progress > 0:
-                self.progress_bar.setFormat("Loading %p%")
-            else:
-                self.progress_bar.setFormat("Initializing...")
-            self.progress_bar.setValue(int(self.model.progress * 100))
-            self.progress_bar.setVisible(True)
+        if self.model.progress == 0:
+            self.progress_bar.setFormat(_("initializing..."))
+            value = 0
+        elif self.model.progress == 1:
+            self.progress_bar.setFormat(_("ready"))
+            value = 0
+        else:
+            self.progress_bar.setFormat(_("generating %p%"))
+            value = int(self.model.progress * 100)
+        self.progress_bar.setValue(value)
 
     def show_result(self, image: Image):
-        self.progress_bar.setVisible(False)
         self.preview_area.show_image(image)
 
     def apply_result(self):
