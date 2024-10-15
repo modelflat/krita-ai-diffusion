@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QSizePolicy,
     QSpinBox,
+    QDoubleSpinBox,
     QToolButton,
     QComboBox,
     QSlider,
@@ -23,7 +24,7 @@ from PyQt5.QtGui import QIcon
 from ..localization import translate as _
 from ..settings import Setting, settings
 from .switch import SwitchWidget
-from .theme import add_header, icon
+from .theme import SignalBlocker, add_header, icon
 
 
 class ExpanderButton(QToolButton):
@@ -220,7 +221,7 @@ class SliderSetting(SettingWidget):
         parent=None,
         minimum: int | float = 0,
         maximum: int | float = 100,
-        format="{}",
+        suffix: str = "",
     ):
         super().__init__(setting, parent)
         self._format_string = format
@@ -236,15 +237,31 @@ class SliderSetting(SettingWidget):
         self._slider.setMaximum(round(maximum * self.multiplier))
         self._slider.setSingleStep(1)
         self._slider.valueChanged.connect(self._change_value)
-        self._label = QLabel(str(self._slider.value()), self)
-        self._label.setMinimumWidth(16)
+        if self._is_float:
+            self._spinbox = QDoubleSpinBox(self)
+            self._spinbox.setMinimum(minimum)
+            self._spinbox.setMaximum(maximum)
+            self._spinbox.setSingleStep(0.1)
+            self._spinbox.setDecimals(1)
+        else:
+            self._spinbox = QSpinBox(self)
+            self._spinbox.setMinimum(self._slider.minimum())
+            self._spinbox.setMaximum(self._slider.maximum())
+            self._spinbox.setSingleStep(1)
+        self._spinbox.setMinimumWidth(75)
+        self._spinbox.setSuffix(suffix)
+        self._spinbox.valueChanged.connect(self._set_slider_value)
         slider_layout.addWidget(self._slider)
-        slider_layout.addWidget(self._label)
+        slider_layout.addWidget(self._spinbox)
         self.set_widget(slider_widget)
 
-    def _change_value(self, value: int):
-        self._label.setText(self._format_string.format(self.value))
+    def _change_value(self, _: Any):
+        with SignalBlocker(self._spinbox):
+            self._spinbox.setValue(self.value)  # type: ignore
         self.value_changed.emit()
+
+    def _set_slider_value(self, _: int):
+        self.value = self._spinbox.value()
 
     @property
     def multiplier(self):
