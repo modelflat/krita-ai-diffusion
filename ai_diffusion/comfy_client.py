@@ -295,7 +295,10 @@ class ComfyClient(Client):
                             # Still no images. Potential scenario: execution cached, but previous
                             # generation happened before the client was connected.
                             err = "No new images were generated because the inputs did not change."
-                            await self._report(ClientEvent.error, local_id, error=err)
+                            # FIXME this is not an error in Live mode. Replacing with a werning since there currently is
+                            # no way to detemine from this point whether the job was for Live mode or not.
+                            # await self._report(ClientEvent.error, local_id, error=err)
+                            log.warning(err + f" job_id = {job_id}")
                         else:
                             last_images = images
                             await self._report(
