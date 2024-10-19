@@ -59,6 +59,7 @@ class ComfyWorkflow:
         self._cache: dict[str, Output | Output2 | Output3 | Output4] = {}
         self._nodes_inputs: dict[str, dict[str, Any]] = node_inputs or {}
         self._run_mode: ComfyRunMode = run_mode
+        self._use_tiled_vae = False
 
     @staticmethod
     def import_graph(existing: dict, node_inputs: dict):
@@ -722,13 +723,15 @@ class ComfyWorkflow:
         )
 
     def vae_encode(self, vae: Output, image: Output):
-        return self.add("VAEEncode", 1, vae=vae, pixels=image)
+        vae_encode_node = "VAEEncodeTiled" if self._use_tiled_vae else "VAEEncode"
+        return self.add(vae_encode_node, 1, vae=vae, pixels=image)
 
     def vae_encode_inpaint(self, vae: Output, image: Output, mask: Output):
         return self.add("VAEEncodeForInpaint", 1, vae=vae, pixels=image, mask=mask, grow_mask_by=0)
 
     def vae_decode(self, vae: Output, latent_image: Output):
-        return self.add("VAEDecode", 1, vae=vae, samples=latent_image)
+        vae_decode_node = "VAEDecodeTiled" if self._use_tiled_vae else "VAEDecode"
+        return self.add(vae_decode_node, 1, vae=vae, samples=latent_image)
 
     def set_latent_noise_mask(self, latent: Output, mask: Output):
         return self.add("SetLatentNoiseMask", 1, samples=latent, mask=mask)
